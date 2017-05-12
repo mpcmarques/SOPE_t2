@@ -5,6 +5,7 @@
 #ifndef SAUNA_GERADOR_H
 #define SAUNA_GERADOR_H
 
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -27,8 +28,9 @@ typedef struct Gerador {
  */
 char getRandomSex();
 
-
 int getRandomDuracaoDeUtilizacao(int maxUtilizacao);
+
+void *observarRejeitados(void *args);
 
 void *gerarPedidos(void *args);
 

@@ -11,13 +11,18 @@ int main(int argc, char *argv[]) {
         gerador->maxUtilizacao = 1000;
         gerador->numPedidos = 10;
 
-        // criar thread que vai gerar pedidos
-        pthread_t geradorThread;
+        // criar threads
+        pthread_t geradorThread, observadorRejeitadosThread;
 
-        printf("criando thread..\n");
         if(pthread_create(&geradorThread, NULL, gerarPedidos, gerador) != 0) {
                 // error handler
-                perror("erro criando thread");
+                perror("erro criando thread geradorThread");
+                free(gerador);
+        }
+
+        if(pthread_create(&observadorRejeitadosThread, NULL, observarRejeitados, NULL) != 0) {
+                // error handler
+                perror("erro criando thread observarRejeitados");
                 free(gerador);
         }
 
@@ -88,14 +93,13 @@ void *gerarPedidos(void *args){
         return 0;
 }
 
-void observarRejeitados(){
+void *observarRejeitados(void *args){
         Pedido pedido;
 
         //  abrir fifo entrada da sauna
         int fd;
-        if ((fd = open(PATH_FIFO_REJEITADOS, O_RDONLY)) < 0) {
-                perror("observarRejeitados: erro ao abrir fifo");
-                return;
+        while((fd = open(PATH_FIFO_REJEITADOS, O_RDONLY)) < 0) {
+                sleep(1);
         }
 
         while(read(fd, &pedido, sizeof(pedido)) > 0) {
@@ -111,5 +115,5 @@ void observarRejeitados(){
 
         // fechar descritor
         close(fd);
-
+        return 0;
 }
