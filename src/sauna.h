@@ -9,8 +9,13 @@
 #include <unistd.h>
 #include "constants.h"
 
+typedef struct Sauna {
+  int numLugaresOcupados;
+  int numLugaresMax;
+  char genero;
+} Sauna;
+
 void startSauna(int numLugares);
 
-int readline(int fd, char *str);
 
 #endif

@@ -27,15 +27,15 @@ int main(int argc, char *argv[]) {
 char getRandomSex(){
         int random = rand()%2;
         if (random == 0) {
-          return 'M';
+                return 'M';
         } else {
-          return 'F';
+                return 'F';
         }
 }
 
 int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
-    int random = rand()%maxUtilizacao+1;
-    return random;
+        int random = rand()%maxUtilizacao+1;
+        return random;
 }
 
 void startGerador(int numPedidos, int maxUtilizacao){
@@ -54,19 +54,17 @@ void startGerador(int numPedidos, int maxUtilizacao){
         }
 
         // gerar pedidos
-        char message[1024];
         while(pedidosCount < numPedidos) {
                 // gerar pedido
-                sprintf(message, "%d %c %d\n", pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(maxUtilizacao));
+                Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(maxUtilizacao)};
 
                 // contacta o programa que gere a sauna atraves de um canal com nome /tmp/entrada
-                write(fd, message, strlen(message)+1);
+                write(fd, &pedido, sizeof(pedido));
                 sleep(3);
                 pedidosCount++;
         }
+
         // fechar ficheiro
         close(fd);
-        // deletar fifos
         unlink(PATH_FIFO_SAUNA_ENTRADA);
-        unlink(PATH_FIFO_REJEITADOS);
 }
