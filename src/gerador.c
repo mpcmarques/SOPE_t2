@@ -103,6 +103,8 @@ void *observarRejeitados(void *args){
         }
 
         while(read(fd, &pedido, sizeof(pedido)) > 0) {
+                printf("Rejeitado: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
+
                 // descarta se o numero de rejeicao e 3
                 if (pedido.numRejeicao == 3) {
                         // descarta pedido

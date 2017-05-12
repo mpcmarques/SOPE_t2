@@ -45,7 +45,7 @@ void startSauna(int numLugares){
                 // genero da pessoa e da sauna nao sao iguais
                 else{
                         // devolver atraves do canal de rejeitados
-                        printf("Rejeitado: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
+                        rejeitarPedido(pedido, fdRejeitados);
                 }
 
         }
@@ -63,5 +63,4 @@ void rejeitarPedido(Pedido pedido, int fd){
 
         // escreve pedido rejeitado em /tmp/rejeitados
         write(fd, &pedido, sizeof(pedido));
-        sleep(3);
 }

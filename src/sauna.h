@@ -18,5 +18,7 @@ typedef struct Sauna {
 
 void startSauna(int numLugares);
 
+void rejeitarPedido(Pedido pedido, int rejeitadosFicheiroFD);
+
 
 #endif
