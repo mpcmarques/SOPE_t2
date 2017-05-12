@@ -6,11 +6,22 @@
 #define TIMEOUT 1000
 
 int main(int argc, char *argv[]) {
-        // generate new random seed
-        srand(time(NULL));
 
-        startGerador(5, 1000);
-        return 0;
+        Gerador *gerador = (Gerador*)malloc(sizeof(Gerador));
+        gerador->maxUtilizacao = 1000;
+        gerador->numPedidos = 10;
+
+        // criar thread que vai gerar pedidos
+        pthread_t geradorThread;
+
+        printf("criando thread..\n");
+        if(pthread_create(&geradorThread, NULL, gerarPedidos, gerador) != 0) {
+                // error handler
+                perror("erro criando thread");
+                free(gerador);
+        }
+
+        pthread_exit(NULL);
 }
 
 /*
@@ -25,6 +36,9 @@ int main(int argc, char *argv[]) {
  */
 
 char getRandomSex(){
+        // generate new random seed
+        srand(time(NULL));
+
         int random = rand()%2;
         if (random == 0) {
                 return 'M';
@@ -38,33 +52,64 @@ int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
         return random;
 }
 
-void startGerador(int numPedidos, int maxUtilizacao){
-
+void *gerarPedidos(void *args){
+        printf("gerando pedidos..\n");
+        Gerador *gerador = args;
         int pedidosCount = 0; // track numero pedidos
 
-        // make fifos
-        mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO);
-        mkfifo(PATH_FIFO_REJEITADOS, S_IRWXU | S_IRWXG | S_IRWXO);
+        // criar fifo
+        if(mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
+                perror("erro criando fifo");
+        }
 
         //  abrir fifo entrada da sauna
         int fd;
         if ((fd = open(PATH_FIFO_SAUNA_ENTRADA, O_WRONLY)) < 0) {
                 perror("error path fifo");
-                return;
+                return NULL;
         }
 
         // gerar pedidos
-        while(pedidosCount < numPedidos) {
+        while(pedidosCount < gerador->numPedidos) {
                 // gerar pedido
-                Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(maxUtilizacao)};
+                Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(gerador->maxUtilizacao), 0};
 
                 // contacta o programa que gere a sauna atraves de um canal com nome /tmp/entrada
                 write(fd, &pedido, sizeof(pedido));
-                sleep(3);
+                sleep(1);
                 pedidosCount++;
         }
 
         // fechar ficheiro
         close(fd);
+        free(gerador);
+        // remover fifo
         unlink(PATH_FIFO_SAUNA_ENTRADA);
+        return 0;
+}
+
+void observarRejeitados(){
+        Pedido pedido;
+
+        //  abrir fifo entrada da sauna
+        int fd;
+        if ((fd = open(PATH_FIFO_REJEITADOS, O_RDONLY)) < 0) {
+                perror("observarRejeitados: erro ao abrir fifo");
+                return;
+        }
+
+        while(read(fd, &pedido, sizeof(pedido)) > 0) {
+                // descarta se o numero de rejeicao e 3
+                if (pedido.numRejeicao == 3) {
+                        // descarta pedido
+                }
+                // tenta novamente se e menor que isso
+                else {
+                        // tenta enviar o pedido novamente
+                }
+        }
+
+        // fechar descritor
+        close(fd);
+
 }

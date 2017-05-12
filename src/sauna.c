@@ -11,10 +11,6 @@ void startSauna(int numLugares){
         Pedido pedido;
         Sauna sauna = {0, numLugares, 'N'};
 
-        // make fifos
-        mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO);
-        mkfifo(PATH_FIFO_REJEITADOS, S_IRWXU | S_IRWXG | S_IRWXO);
-
         if ((fd = open(PATH_FIFO_SAUNA_ENTRADA, O_RDONLY)) < 0) {
                 perror("error reading fifo sauna entrada");
                 return;
@@ -22,7 +18,7 @@ void startSauna(int numLugares){
 
         while(read(fd, &pedido, sizeof(pedido)) > 0) {
 
-                // ver se a sauna possui genero
+                // Definir genero da sauna caso nao tenha sauna
                 if (sauna.genero == 'N') {
                         // definir sauna como genero inicial
                         sauna.genero = pedido.genero;
@@ -44,6 +40,30 @@ void startSauna(int numLugares){
 
         // fechar descritor
         close(fd);
-        // deletar fifos
-        unlink(PATH_FIFO_REJEITADOS);
+}
+
+void rejeitarPedido(Pedido pedido){
+        int pedidosCount = 0; // track numero pedidos
+
+        // criar fifo
+        mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO);
+
+        //  abrir fifo entrada da sauna
+        int fd;
+        if ((fd = open(PATH_FIFO_SAUNA_ENTRADA, O_WRONLY)) < 0) {
+                perror("error path fifo");
+                return;
+        }
+
+        // mudar rejeicao do pedido
+        pedido.numRejeicao += 1;
+
+        // escreve pedido rejeitado em /tmp/rejeitados
+        write(fd, &pedido, sizeof(pedido));
+        sleep(3);
+        pedidosCount++;
+
+        // fechar ficheiro
+        close(fd);
+        unlink(PATH_FIFO_SAUNA_ENTRADA);
 }

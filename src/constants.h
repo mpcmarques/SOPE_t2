@@ -8,6 +8,7 @@ typedef struct Pedido {
   int numSerie;
   char genero;
   int tempo;
+  int numRejeicao;
 }Pedido;
 
 #endif

@@ -14,12 +14,12 @@
 #include <time.h>
 #include <stdlib.h>
 #include "constants.h"
+#include <pthread.h>
 
-/**
-   @param numPedidos é o número total de pedidos gerados ao longo da execução do programa
-   @param maxUtilizacao  é o tempo máximo de duração de uma utilização da sauna, em milisegundos
-*/
-void startGerador(int numPedidos, int maxUtilizacao);
+typedef struct Gerador {
+  int numPedidos;
+  int maxUtilizacao;
+}Gerador;
 
 /**
  * Retorna um caracter representando o sexo
@@ -29,5 +29,7 @@ char getRandomSex();
 
 
 int getRandomDuracaoDeUtilizacao(int maxUtilizacao);
+
+void *gerarPedidos(void *args);
 
 #endif //SAUNA_GERADOR_H
