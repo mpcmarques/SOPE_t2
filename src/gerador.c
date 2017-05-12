@@ -26,7 +26,10 @@ int main(int argc, char *argv[]) {
                 free(gerador);
         }
 
-        pthread_exit(NULL);
+        pthread_join(geradorThread, NULL);
+        pthread_join(observadorRejeitadosThread, NULL);
+
+        return 0;
 }
 
 /*
@@ -105,13 +108,9 @@ void *observarRejeitados(void *args){
         while(read(fd, &pedido, sizeof(pedido)) > 0) {
                 printf("Rejeitado: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
 
-                // descarta se o numero de rejeicao e 3
-                if (pedido.numRejeicao == 3) {
-                        // descarta pedido
-                }
-                // tenta novamente se e menor que isso
-                else {
-                        // tenta enviar o pedido novamente
+                // re-aproveita se o pedido foi rejeitado menos de 3 vezes
+                if (pedido.numRejeicao < 3) {
+                        // tenta enviar pedido novamente
                 }
         }
 
