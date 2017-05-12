@@ -6,6 +6,8 @@
 #define TIMEOUT 1000
 
 int main(int argc, char *argv[]) {
+        // generate new random seed
+        srand(time(NULL));
 
         startGerador(5, 1000);
         return 0;
@@ -21,6 +23,20 @@ int main(int argc, char *argv[]) {
  * Durante toda a operação, o programa gerador emite mensagens de registo, para um ficheiro com o
  * nome /tmp/ger.pid
  */
+
+char getRandomSex(){
+        int random = rand()%2;
+        if (random == 0) {
+          return 'M';
+        } else {
+          return 'F';
+        }
+}
+
+int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
+    int random = rand()%maxUtilizacao+1;
+    return random;
+}
 
 void startGerador(int numPedidos, int maxUtilizacao){
 
@@ -41,7 +57,7 @@ void startGerador(int numPedidos, int maxUtilizacao){
         char message[1024];
         while(pedidosCount < numPedidos) {
                 // gerar pedido
-                sprintf(message, "%d %c %d\n", pedidosCount, 'M', 12);
+                sprintf(message, "%d %c %d\n", pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(maxUtilizacao));
 
                 // contacta o programa que gere a sauna atraves de um canal com nome /tmp/entrada
                 write(fd, message, strlen(message)+1);
