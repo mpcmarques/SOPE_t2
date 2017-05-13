@@ -123,7 +123,7 @@ void startSauna(int numLugares){
                         // adicionar pessoa a sauna
                         // criar thread da utilizacao da sauna
                         pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
-                        pthread_join(utilizadoresThreads[sauna.numLugaresOcupados], NULL);
+                        //pthread_join(utilizadoresThreads[sauna.numLugaresOcupados], NULL);
 
                         sauna.numLugaresOcupados++;
                 }
@@ -133,6 +133,12 @@ void startSauna(int numLugares){
                         rejeitarPedido(pedido, fdRejeitados);
                 }
 
+        }
+
+        // esperar pedidos serem completados
+        int i = 0;
+        for (i = 0; i < sauna.numLugaresOcupados; i++) {
+          pthread_join(utilizadoresThreads[i], NULL);
         }
 
         // fechar descritor
