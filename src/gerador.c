@@ -5,7 +5,13 @@
 
 #define TIMEOUT 1000
 
+
+// Global variables
+int saunaEntradaFD; //  File descriptor
+
 int main(int argc, char *argv[]) {
+        // generate new random seed
+        srand(time(NULL));
 
         Gerador *gerador = (Gerador*)malloc(sizeof(Gerador));
         gerador->maxUtilizacao = 1000;
@@ -44,9 +50,6 @@ int main(int argc, char *argv[]) {
  */
 
 char getRandomSex(){
-        // generate new random seed
-        srand(time(NULL));
-
         int random = rand()%2;
         if (random == 0) {
                 return 'M';
@@ -61,7 +64,6 @@ int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
 }
 
 void *gerarPedidos(void *args){
-        printf("gerando pedidos..\n");
         Gerador *gerador = args;
         int pedidosCount = 0; // track numero pedidos
 
@@ -71,8 +73,7 @@ void *gerarPedidos(void *args){
         }
 
         //  abrir fifo entrada da sauna
-        int fd;
-        if ((fd = open(PATH_FIFO_SAUNA_ENTRADA, O_WRONLY)) < 0) {
+        if ((saunaEntradaFD = open(PATH_FIFO_SAUNA_ENTRADA, O_WRONLY)) < 0) {
                 perror("error path fifo");
                 return NULL;
         }
@@ -83,13 +84,13 @@ void *gerarPedidos(void *args){
                 Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(gerador->maxUtilizacao), 0};
 
                 // contacta o programa que gere a sauna atraves de um canal com nome /tmp/entrada
-                write(fd, &pedido, sizeof(pedido));
+                write(saunaEntradaFD, &pedido, sizeof(pedido));
                 sleep(1);
                 pedidosCount++;
         }
 
         // fechar ficheiro
-        close(fd);
+        close(saunaEntradaFD);
         free(gerador);
         // remover fifo
         unlink(PATH_FIFO_SAUNA_ENTRADA);
@@ -106,11 +107,14 @@ void *observarRejeitados(void *args){
         }
 
         while(read(fd, &pedido, sizeof(pedido)) > 0) {
-                printf("Rejeitado: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
 
                 // re-aproveita se o pedido foi rejeitado menos de 3 vezes
                 if (pedido.numRejeicao < 3) {
+                        printf("Rejeitado: %d %c %d %d\n", pedido.numSerie, pedido.genero, pedido.tempo, pedido.numRejeicao);
+
                         // tenta enviar pedido novamente
+                        write(saunaEntradaFD, &pedido, sizeof(pedido));
+                        sleep(1);
                 }
         }
 

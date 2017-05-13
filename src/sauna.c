@@ -1,15 +1,53 @@
 #include "sauna.h"
 
+// Global variables
+Sauna sauna;
+
 int main(int argc, char const *argv[]) {
+        int numLugares;
+
         // start sauna
-        startSauna(20);
+        if(argc < 2 || argc > 2) {
+                printf("Usage: sauna <n.lugares>\n");
+                return 1;
+        }
+
+        if((numLugares = atoi(argv[1])) <= 0) {
+                printf("<n.lugares> precisa ser um valor inteiro!\n");
+        }
+
+        startSauna(numLugares);
         return 0;
+}
+
+void *adicionarASauna(void *args){
+        Pedido *pedido = args;
+        clock_t begin;
+        double tempo_gasto;
+
+        printf("Aceito: %d %c %d\n", pedido->numSerie, pedido->genero, pedido->tempo);
+
+        // marca o começo do tempo
+        begin = clock();
+        // segurar o thread por o tempo
+        while(((tempo_gasto = ((clock() - begin) / CLOCKS_PER_SEC)) * 1000 ) > pedido->tempo) {
+                // seg
+        }
+        // remover da sauna
+        sauna.numLugaresOcupados--;
+        return NULL;
 }
 
 void startSauna(int numLugares){
         int fdSauna, fdRejeitados;
         Pedido pedido;
-        Sauna sauna = {0, numLugares, 'N'};
+
+        // setup sauna
+        sauna.genero = 'N';
+        sauna.numLugaresMax = numLugares;
+        sauna.numLugaresOcupados = 0;
+
+        pthread_t utilizadoresThreads[numLugares];
 
         // criar fifo rejeitados
         if(mkfifo(PATH_FIFO_REJEITADOS, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
@@ -38,9 +76,12 @@ void startSauna(int numLugares){
 
                 // sauna possui genero
                 // ver se o genero do pedido e da sauna sao iguais
-                if(pedido.genero == sauna.genero) {
+                if(pedido.genero == sauna.genero && sauna.numLugaresOcupados < sauna.numLugaresMax) {
                         // adicionar pessoa a sauna
-                        printf("Aceito: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
+                        // criar thread da utilizacao da sauna
+                        pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
+
+                        sauna.numLugaresOcupados++;
                 }
                 // genero da pessoa e da sauna nao sao iguais
                 else{
@@ -48,6 +89,12 @@ void startSauna(int numLugares){
                         rejeitarPedido(pedido, fdRejeitados);
                 }
 
+        }
+
+        // esperar processos de utilizacao terminar
+        int i;
+        for(i = 0; i < sauna.numLugaresMax; i++){
+          pthread_join(utilizadoresThreads[i], NULL);
         }
 
         // fechar descritor

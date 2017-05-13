@@ -5,7 +5,7 @@
 #ifndef SAUNA_GERADOR_H
 #define SAUNA_GERADOR_H
 
-
+#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include "constants.h"
 #include <pthread.h>
+#include <mqueue.h>
 
 typedef struct Gerador {
   int numPedidos;
