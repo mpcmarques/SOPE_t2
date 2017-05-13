@@ -14,6 +14,7 @@ int main(int argc, char const *argv[]) {
 
         if((numLugares = atoi(argv[1])) <= 0) {
                 printf("<n.lugares> precisa ser um valor inteiro!\n");
+                return 1;
         }
 
         startSauna(numLugares);
@@ -22,17 +23,14 @@ int main(int argc, char const *argv[]) {
 
 void *adicionarASauna(void *args){
         Pedido *pedido = args;
-        clock_t begin;
-        double tempo_gasto;
 
         printf("Aceito: %d %c %d\n", pedido->numSerie, pedido->genero, pedido->tempo);
 
-        // marca o começo do tempo
-        begin = clock();
         // segurar o thread por o tempo
-        while(((tempo_gasto = ((clock() - begin) / CLOCKS_PER_SEC)) * 1000 ) > pedido->tempo) {
-                // seg
-        }
+        struct timespec sleepValue = {0};
+        sleepValue.tv_nsec = pedido->tempo * NANO_SECOND_MULTIPLIER;
+        nanosleep(&sleepValue, NULL);
+
         // remover da sauna
         sauna.numLugaresOcupados--;
         return NULL;
@@ -80,7 +78,7 @@ void startSauna(int numLugares){
                         // adicionar pessoa a sauna
                         // criar thread da utilizacao da sauna
                         pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
-
+                        pthread_join(utilizadoresThreads[sauna.numLugaresOcupados], NULL);
                         sauna.numLugaresOcupados++;
                 }
                 // genero da pessoa e da sauna nao sao iguais
@@ -92,10 +90,7 @@ void startSauna(int numLugares){
         }
 
         // esperar processos de utilizacao terminar
-        int i;
-        for(i = 0; i < sauna.numLugaresMax; i++){
-          pthread_join(utilizadoresThreads[i], NULL);
-        }
+        printf("Esperando utilizadores terminarem de utilizar a sauna\n");
 
         // fechar descritor
         close(fdSauna);
