@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
         srand(time(NULL));
 
         Gerador *gerador = (Gerador*)malloc(sizeof(Gerador));
-        gerador->maxUtilizacao = 1000;
+        gerador->maxUtilizacao = 100000;
         gerador->numPedidos = 10;
 
         // criar threads

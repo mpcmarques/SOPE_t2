@@ -2,9 +2,14 @@
 
 // Global variables
 Sauna sauna;
+FILE *registroFile;
+struct timespec startTimespec;
 
 int main(int argc, char const *argv[]) {
         int numLugares;
+
+        // get program starting time
+        clock_gettime(CLOCK_MONOTONIC, &startTimespec);
 
         // start sauna
         if(argc < 2 || argc > 2) {
@@ -17,12 +22,40 @@ int main(int argc, char const *argv[]) {
                 return 1;
         }
 
+        // start file IO
+        // create file path
+        char registro[100];
+        sprintf(registro, "tmp/bal.%d", getpid());
+        if ((registroFile = fopen(registro, "a")) == NULL) {
+                perror("Erro ao abrir ficheiro de registro");
+                return 1;
+        }
+
+        // start sauna
         startSauna(numLugares);
+
+        // fechar file
+        fclose(registroFile);
         return 0;
+}
+
+void timespec_diff(struct timespec *start, struct timespec *stop, struct timespec *result){
+        if ((stop->tv_nsec - start->tv_nsec) < 0) {
+                result->tv_sec = stop->tv_sec - start->tv_sec - 1;
+                result->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
+        } else {
+                result->tv_sec = stop->tv_sec - start->tv_sec;
+                result->tv_nsec = stop->tv_nsec - start->tv_nsec;
+        }
+
+        return;
 }
 
 void *adicionarASauna(void *args){
         Pedido *pedido = args;
+
+        // registrar açao
+        gravarMensagemRegistro(*pedido, "SERVIDO");
 
         printf("Aceito: %d %c %d\n", pedido->numSerie, pedido->genero, pedido->tempo);
 
@@ -34,6 +67,18 @@ void *adicionarASauna(void *args){
         // remover da sauna
         sauna.numLugaresOcupados--;
         return NULL;
+}
+
+void gravarMensagemRegistro(Pedido pedido, char *status_pedido){
+        // tempo atual
+        struct timespec tempoAtual, result;
+        clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
+        // get time difference
+        timespec_diff(&startTimespec, &tempoAtual, &result);
+
+        double millisecondsPassed = result.tv_sec * 1000 + result.tv_nsec/1000000;
+
+        fprintf(registroFile, "%.2f – %d – %lu – %d: %c – %d – %s\n", millisecondsPassed, getpid(), pthread_self(), pedido.numSerie, pedido.genero, pedido.tempo, status_pedido);
 }
 
 void startSauna(int numLugares){
@@ -79,6 +124,7 @@ void startSauna(int numLugares){
                         // criar thread da utilizacao da sauna
                         pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
                         pthread_join(utilizadoresThreads[sauna.numLugaresOcupados], NULL);
+
                         sauna.numLugaresOcupados++;
                 }
                 // genero da pessoa e da sauna nao sao iguais
@@ -88,9 +134,6 @@ void startSauna(int numLugares){
                 }
 
         }
-
-        // esperar processos de utilizacao terminar
-        printf("Esperando utilizadores terminarem de utilizar a sauna\n");
 
         // fechar descritor
         close(fdSauna);
@@ -105,4 +148,7 @@ void rejeitarPedido(Pedido pedido, int fd){
 
         // escreve pedido rejeitado em /tmp/rejeitados
         write(fd, &pedido, sizeof(pedido));
+
+        // rejeitarPedid
+        gravarMensagemRegistro(pedido, "REJEITADO");
 }

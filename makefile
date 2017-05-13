@@ -1,6 +1,6 @@
 CC=gcc
 SRCPATH=src/
-LDFLAGS= -lpthread -pthread -D_REENTRANT -lrt -Wall
+LDFLAGS= -Wall -lpthread -pthread -D_REENTRANT -lrt -lm
 
 GERADOREXECUTABLE=gerador.out
 SAUNAEXECUTABLE=sauna.out

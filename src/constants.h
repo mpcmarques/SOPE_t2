@@ -4,6 +4,7 @@
 #define PATH_FIFO_SAUNA_ENTRADA "tmp/entrada"
 #define PATH_FIFO_REJEITADOS "tmp/rejeitados"
 
+
 #define NANO_SECOND_MULTIPLIER  1000000
 
 typedef struct Pedido {
