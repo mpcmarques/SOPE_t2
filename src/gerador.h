@@ -5,22 +5,24 @@
 #ifndef SAUNA_GERADOR_H
 #define SAUNA_GERADOR_H
 
-#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/file.h>
 #include <unistd.h>
-#include <time.h>
-#include <stdlib.h>
-#include "constants.h"
 #include <pthread.h>
-#include <mqueue.h>
+#include <stdlib.h>
+#include <math.h>
+#include "constants.h"
+#include <unistd.h>
 
 typedef struct Gerador {
   int numPedidos;
   int maxUtilizacao;
+  int pedidosGerados;
+  int pedidosRecusados;
+  int pedidosDescartados;
 }Gerador;
 
 /**
@@ -34,5 +36,9 @@ int getRandomDuracaoDeUtilizacao(int maxUtilizacao);
 void *observarRejeitados(void *args);
 
 void *gerarPedidos(void *args);
+
+void gravarMensagemRegistro(Pedido pedido, char *status_pedido);
+
+void startGerador();
 
 #endif //SAUNA_GERADOR_H

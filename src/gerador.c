@@ -3,51 +3,92 @@
 //
 #include "gerador.h"
 
-#define TIMEOUT 1000
-
-
 // Global variables
 int saunaEntradaFD; //  File descriptor
+Gerador gerador;
+struct timespec startTimespec;
+FILE *registroFile;
 
 int main(int argc, char *argv[]) {
+  int numGerar; int maxUtilizacao;
+        if (argc < 3 || argc > 3 ) {
+                printf("Usage:gerador <n. pedidos> <max. utilização> \n");
+                return 1;
+        }
+
+        if((numGerar = atoi(argv[1])) <= 0) {
+                printf("<n.pedidos> precisa ser um valor inteiro!\n");
+                return 1;
+        }
+
+        if((maxUtilizacao = atoi(argv[2])) <= 0) {
+                printf("<max.utilizacao> precisa ser um valor inteiro!\n");
+                return 1;
+        }
+
+        // get program starting time
+        clock_gettime(CLOCK_MONOTONIC, &startTimespec);
+
         // generate new random seed
         srand(time(NULL));
 
-        Gerador *gerador = (Gerador*)malloc(sizeof(Gerador));
-        gerador->maxUtilizacao = 100000;
-        gerador->numPedidos = 10;
+        // start file IO
+        // create file path
+        char registro[100];
+        sprintf(registro, "tmp/ger.%d", getpid());
+        if ((registroFile = fopen(registro, "a")) == NULL) {
+                perror("Erro ao abrir ficheiro de registro");
+                return 1;
+        }
+
+        // start gerador
+        startGerador(numGerar, maxUtilizacao);
+
+        // escrever ultima linha do gerador
+        fprintf(registroFile, "Gerados: %d Recusados: %d Descartados: %d\n", gerador.pedidosGerados, gerador.pedidosRecusados, gerador.pedidosDescartados);
+
+        // fechar file
+        fclose(registroFile);
+
+        return 0;
+}
+
+void startGerador(int numPedidos, int maxUtilizacao){
+        // setup gerador
+        gerador.maxUtilizacao = maxUtilizacao;
+        gerador.numPedidos = numPedidos;
+        gerador.pedidosGerados = 0;
+        gerador.pedidosDescartados = 0;
+        gerador.pedidosRecusados = 0;
 
         // criar threads
         pthread_t geradorThread, observadorRejeitadosThread;
 
-        if(pthread_create(&geradorThread, NULL, gerarPedidos, gerador) != 0) {
+        if(pthread_create(&geradorThread, NULL, gerarPedidos, NULL) != 0) {
                 // error handler
                 perror("erro criando thread geradorThread");
-                free(gerador);
         }
 
         if(pthread_create(&observadorRejeitadosThread, NULL, observarRejeitados, NULL) != 0) {
                 // error handler
                 perror("erro criando thread observarRejeitados");
-                free(gerador);
         }
 
         pthread_join(geradorThread, NULL);
         pthread_join(observadorRejeitadosThread, NULL);
-
-        return 0;
 }
 
-/*
- * E um programa multithread em que um thread efectua a geraçao aleatoria de pedidos e os apresenta a sauna
- * Outro thread escuta os pedidos rejeitados e os recoloca na fila de pedidos, mas so caso o numero de um dado
- * pedido nao exceder 3, caso exceda, descarta o pedido!
- * */
+void gravarMensagemRegistro(Pedido pedido, char *status_pedido){
+        // tempo atual
+        struct timespec tempoAtual, result;
+        clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
+        // get time difference
+        timespec_diff(&startTimespec, &tempoAtual, &result);
 
-/*
- * Durante toda a operação, o programa gerador emite mensagens de registo, para um ficheiro com o
- * nome /tmp/ger.pid
- */
+        double millisecondsPassed = result.tv_sec * 1000 + result.tv_nsec/1000000;
+
+        fprintf(registroFile, "%.2f – %d – %d: %c – %d – %s\n", millisecondsPassed, getpid(), pedido.numSerie, pedido.genero, pedido.tempo, status_pedido);
+}
 
 char getRandomSex(){
         int random = rand()%2;
@@ -64,7 +105,6 @@ int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
 }
 
 void *gerarPedidos(void *args){
-        Gerador *gerador = args;
         int pedidosCount = 0; // track numero pedidos
 
         // criar fifo
@@ -79,9 +119,13 @@ void *gerarPedidos(void *args){
         }
 
         // gerar pedidos
-        while(pedidosCount < gerador->numPedidos) {
+        while(pedidosCount < gerador.numPedidos) {
                 // gerar pedido
-                Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(gerador->maxUtilizacao), 0};
+                Pedido pedido = {pedidosCount, getRandomSex(), getRandomDuracaoDeUtilizacao(gerador.maxUtilizacao), 0};
+
+                //  adicionar um pedido gerado
+                gravarMensagemRegistro(pedido, "PEDIDO");
+                gerador.pedidosGerados++;
 
                 // contacta o programa que gere a sauna atraves de um canal com nome /tmp/entrada
                 write(saunaEntradaFD, &pedido, sizeof(pedido));
@@ -91,7 +135,6 @@ void *gerarPedidos(void *args){
 
         // fechar ficheiro
         close(saunaEntradaFD);
-        free(gerador);
         // remover fifo
         unlink(PATH_FIFO_SAUNA_ENTRADA);
         return 0;
@@ -111,10 +154,15 @@ void *observarRejeitados(void *args){
                 // re-aproveita se o pedido foi rejeitado menos de 3 vezes
                 if (pedido.numRejeicao < 3) {
                         printf("Rejeitado: %d %c %d %d\n", pedido.numSerie, pedido.genero, pedido.tempo, pedido.numRejeicao);
+                        gerador.pedidosRecusados++;
+                        gravarMensagemRegistro(pedido, "RECUSADO");
 
                         // tenta enviar pedido novamente
                         write(saunaEntradaFD, &pedido, sizeof(pedido));
                         sleep(1);
+                } else {
+                        gerador.pedidosDescartados++;
+                        gravarMensagemRegistro(pedido, "DESCARTADO");
                 }
         }
 

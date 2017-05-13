@@ -34,21 +34,12 @@ int main(int argc, char const *argv[]) {
         // start sauna
         startSauna(numLugares);
 
+        // escrever ultima linha da sauna
+        fprintf(registroFile, "Recebidos: %d Servidos: %d Recusados: %d\n", sauna.pedidosRecebidos, sauna.pedidosServidos, sauna.pedidosRecusados);
+
         // fechar file
         fclose(registroFile);
         return 0;
-}
-
-void timespec_diff(struct timespec *start, struct timespec *stop, struct timespec *result){
-        if ((stop->tv_nsec - start->tv_nsec) < 0) {
-                result->tv_sec = stop->tv_sec - start->tv_sec - 1;
-                result->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
-        } else {
-                result->tv_sec = stop->tv_sec - start->tv_sec;
-                result->tv_nsec = stop->tv_nsec - start->tv_nsec;
-        }
-
-        return;
 }
 
 void *adicionarASauna(void *args){
@@ -89,6 +80,9 @@ void startSauna(int numLugares){
         sauna.genero = 'N';
         sauna.numLugaresMax = numLugares;
         sauna.numLugaresOcupados = 0;
+        sauna.pedidosRecebidos = 0;
+        sauna.pedidosRecusados = 0;
+        sauna.pedidosServidos = 0;
 
         pthread_t utilizadoresThreads[numLugares];
 
@@ -110,6 +104,7 @@ void startSauna(int numLugares){
 
         // ler entrada da sauna
         while(read(fdSauna, &pedido, sizeof(pedido)) > 0) {
+                sauna.pedidosRecebidos++;
 
                 // Definir genero da sauna caso nao tenha sauna
                 if (sauna.genero == 'N') {
@@ -121,14 +116,15 @@ void startSauna(int numLugares){
                 // ver se o genero do pedido e da sauna sao iguais
                 if(pedido.genero == sauna.genero && sauna.numLugaresOcupados < sauna.numLugaresMax) {
                         // adicionar pessoa a sauna
+                        sauna.pedidosServidos++;
                         // criar thread da utilizacao da sauna
                         pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
-                        //pthread_join(utilizadoresThreads[sauna.numLugaresOcupados], NULL);
 
                         sauna.numLugaresOcupados++;
                 }
                 // genero da pessoa e da sauna nao sao iguais
                 else{
+                        sauna.pedidosRecusados++;
                         // devolver atraves do canal de rejeitados
                         rejeitarPedido(pedido, fdRejeitados);
                 }
@@ -138,7 +134,7 @@ void startSauna(int numLugares){
         // esperar pedidos serem completados
         int i = 0;
         for (i = 0; i < sauna.numLugaresOcupados; i++) {
-          pthread_join(utilizadoresThreads[i], NULL);
+                pthread_join(utilizadoresThreads[i], NULL);
         }
 
         // fechar descritor
