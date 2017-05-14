@@ -112,13 +112,13 @@ void startSauna(int numLugares){
 
         // criar fifo rejeitados
         if(mkfifo(PATH_FIFO_REJEITADOS, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
-                perror("erro criando fifo rejeitados! ");
+                perror("erro ao criar fifo rejeitados! ");
                 return;
         }
 
         // criar fifosauna entrada
         if(mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
-                perror("erro criando fifo sauna entrada! ");
+                perror("erro ao criar fifo sauna entrada! ");
                 return;
         }
 

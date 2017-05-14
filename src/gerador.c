@@ -97,13 +97,13 @@ void startGerador(int numPedidos, int maxUtilizacao){
 
         if(pthread_create(&geradorThread, NULL, gerarPedidos, NULL) != 0) {
                 // error handler
-                perror("Gerador: erro criando thread geradorThread");
+                perror("Gerador: erro ao criar thread geradorThread");
                 return;
         }
 
         if(pthread_create(&observadorRejeitadosThread, NULL, observarRejeitados, NULL) != 0) {
                 // error handler
-                perror("Gerador: erro criando thread observarRejeitados");
+                perror("Gerador: erro ao criar thread observarRejeitados");
                 return;
         }
 
@@ -144,6 +144,7 @@ int getRandomDuracaoDeUtilizacao(int maxUtilizacao){
 void *gerarPedidos(void *args){
         int pedidosCount = 0; // track numero pedidos
 
+        printf("Gerador: iniciou!\n");
         // gerar pedidos
         while(pedidosCount < gerador.numPedidos) {
                 pthread_mutex_lock(&mut); // lock thread

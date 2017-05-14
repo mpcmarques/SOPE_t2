@@ -1,0 +1,13 @@
+- Uso:
+  ./gerador.out <n.pedidos gerados> <n.max de tempo de utilizacao>
+
+- Saída padrão:
+ "Gerador: iniciou!"      -> programa começou a gerar pedidos.
+ "Gerador: terminou!"     -> programa terminou de gerar pedidos.
+
+  Erros:
+  "Gerador: erro ao criar thread (THREAD)"                -> houve um problema ao criar o thread (THREAD).
+  "Gerador: Aguardando ligação com a lista (LISTA)\n");   -> gerador esta a espera da sauna.
+
+- Registros:
+  ger.PID , sendo PID o id do processo.

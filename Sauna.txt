@@ -1,0 +1,16 @@
+- Uso:
+  ./sauna.out <n.max de utilizadores da sauna>
+
+- Saída padrão:
+ "Sauna: sauna iniciada, esperando ligação com gerador.."      -> sauna iniciou seu serviço, está a espera do programa gerador correr.
+ "Sauna: terminou!"                                            -> sauna terminou de receber pedidos.
+ "Aceito: (Pedido.numSerie) (Pedido.genero) (Pedido.tempo)"    -> Pedido recebido foi aceito
+ "Rejeitado: (Pedido.numSerie) (Pedido.genero) (Pedido.tempo)" -> Pedido recebido foi rejeitado
+
+  Erros:
+  "Sauna: erro ao criar fifo (nome_fifo)!"              -> Houve um problema ao criar o FIFO (nome_fifo)
+  "Sauna: erro ao criar thread (THREAD)"                -> houve um problema ao criar o thread (THREAD).
+  "Sauna: Aguardando ligação com a lista (LISTA)\n");   -> gerador esta a espera da sauna.
+
+- Registros:
+  bal.PID , PID sendo o ID do processo.
