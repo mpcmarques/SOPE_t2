@@ -17,12 +17,18 @@
 #include "constants.h"
 #include <unistd.h>
 
+/**
+ * Struct representando o gerador de pedidos
+ */
 typedef struct Gerador {
   int numPedidos;
   int maxUtilizacao;
-  int pedidosGerados;
-  int pedidosRecusados;
-  int pedidosDescartados;
+  int pedidosGeradosM;
+  int pedidosGeradosF;
+  int pedidosRecusadosM;
+  int pedidosRecusadosF;
+  int pedidosDescartadosM;
+  int pedidosDescartadosF;
 }Gerador;
 
 /**
@@ -31,14 +37,33 @@ typedef struct Gerador {
  */
 char getRandomSex();
 
+/**
+ * Retorna um valor entre 0 e o maximo de milisegundos de utilizaçao
+ * @param  maxUtilizacao Tempo de utilização maximo em milisegundos
+ * @return               Valor entre 0 e o tempo máximo
+ */
 int getRandomDuracaoDeUtilizacao(int maxUtilizacao);
 
+/**
+ * Lida com as rejeições
+ */
 void *observarRejeitados(void *args);
 
+/**
+ * Gera pedidos
+ */
 void *gerarPedidos(void *args);
 
+/**
+ * Grava uma mensagem no ficheiro de registro
+ * @param pedido        Pedido a ser gravado
+ * @param status_pedido Status do pedido a ser gravado
+ */
 void gravarMensagemRegistro(Pedido pedido, char *status_pedido);
 
+/**
+ * Inicia o gerador
+ */
 void startGerador();
 
 #endif //SAUNA_GERADOR_H

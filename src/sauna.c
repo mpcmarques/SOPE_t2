@@ -5,6 +5,8 @@ Sauna sauna;
 FILE *registroFile;
 struct timespec startTimespec;
 
+pthread_mutex_t mut=PTHREAD_MUTEX_INITIALIZER; /* mutex para a sec.crít. */
+
 int main(int argc, char const *argv[]) {
         int numLugares;
 
@@ -35,7 +37,20 @@ int main(int argc, char const *argv[]) {
         startSauna(numLugares);
 
         // escrever ultima linha da sauna
-        fprintf(registroFile, "Recebidos: %d Servidos: %d Recusados: %d\n", sauna.pedidosRecebidos, sauna.pedidosServidos, sauna.pedidosRecusados);
+        fprintf(registroFile, "HOMENS : Recebidos: %d Servidos: %d Recusados: %d\n",
+                sauna.pedidosRecebidosM,
+                sauna.pedidosServidosM,
+                sauna.pedidosRecusadosM);
+                
+        fprintf(registroFile, "MULHERES : Recebidos: %d Servidos: %d Recusados: %d\n",
+                sauna.pedidosRecebidosF,
+                sauna.pedidosServidosF,
+                sauna.pedidosRecusadosF);
+
+        fprintf(registroFile, "TOTAL : Recebidos: %d Servidos: %d Recusados: %d\n",
+                sauna.pedidosRecebidosM + sauna.pedidosRecebidosF,
+                sauna.pedidosServidosM + sauna.pedidosServidosF,
+                sauna.pedidosRecusadosM + sauna.pedidosRecusadosF);
 
         // fechar file
         fclose(registroFile);
@@ -43,20 +58,26 @@ int main(int argc, char const *argv[]) {
 }
 
 void *adicionarASauna(void *args){
+        pthread_mutex_lock(&mut); // lock thread
+
         Pedido *pedido = args;
 
         // registrar açao
         gravarMensagemRegistro(*pedido, "SERVIDO");
 
-        printf("Aceito: %d %c %d\n", pedido->numSerie, pedido->genero, pedido->tempo);
+        pthread_mutex_unlock(&mut); // unlock mutex
 
-        // segurar o thread por o tempo
-        struct timespec sleepValue = {0};
-        sleepValue.tv_nsec = pedido->tempo * NANO_SECOND_MULTIPLIER;
-        nanosleep(&sleepValue, NULL);
+        // segurar o thread por o tempo determinado
+        msleep(&pedido->tempo);
 
+        pthread_mutex_lock(&mut); // lock thread
+
+        printf("ended sleeping..\n");
         // remover da sauna
         sauna.numLugaresOcupados--;
+
+        pthread_mutex_unlock(&mut); // unlock mutex
+
         return NULL;
 }
 
@@ -80,34 +101,52 @@ void startSauna(int numLugares){
         sauna.genero = 'N';
         sauna.numLugaresMax = numLugares;
         sauna.numLugaresOcupados = 0;
-        sauna.pedidosRecebidos = 0;
-        sauna.pedidosRecusados = 0;
-        sauna.pedidosServidos = 0;
+        sauna.pedidosRecebidosM = 0;
+        sauna.pedidosRecebidosF = 0;
+        sauna.pedidosRecusadosM = 0;
+        sauna.pedidosServidosM = 0;
+        sauna.pedidosServidosF = 0;
 
         pthread_t utilizadoresThreads[numLugares];
 
         // criar fifo rejeitados
         if(mkfifo(PATH_FIFO_REJEITADOS, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
-                perror("erro criando fifo rejeitados");
+                perror("erro criando fifo rejeitados! ");
+                return;
         }
+
+        // criar fifosauna entrada
+        if(mkfifo(PATH_FIFO_SAUNA_ENTRADA, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
+                perror("erro criando fifo sauna entrada! ");
+                return;
+        }
+
+        printf("Sauna: fifos criados, esperando ligação\n");
 
         // abrir sauna entrada para leitura
         while((fdSauna = open(PATH_FIFO_SAUNA_ENTRADA, O_RDONLY)) < 0) {
+                perror("sauna: error opening fifo sauna entrada");
                 sleep(1);
         }
 
         // abrir rejeitados para escrita
-        if ((fdRejeitados = open(PATH_FIFO_REJEITADOS, O_WRONLY)) < 0) {
-                perror("error path fifo");
-                return;
+        while((fdRejeitados = open(PATH_FIFO_REJEITADOS, O_WRONLY | O_NONBLOCK)) < 0) {
+                printf("sauna: aguardando rejeitados..\n");
+                sleep(1);
         }
 
         // ler entrada da sauna
         while(read(fdSauna, &pedido, sizeof(pedido)) > 0) {
-                sauna.pedidosRecebidos++;
+                pthread_mutex_lock(&mut); // lock thread
+
+                if(pedido.genero == 'M') {
+                        sauna.pedidosRecebidosM++;
+                } else {
+                        sauna.pedidosRecebidosF++;
+                }
 
                 // Definir genero da sauna caso nao tenha sauna
-                if (sauna.genero == 'N') {
+                if (sauna.genero == 'N' || sauna.numLugaresOcupados == 0) {
                         // definir sauna como genero inicial
                         sauna.genero = pedido.genero;
                 }
@@ -115,33 +154,47 @@ void startSauna(int numLugares){
                 // sauna possui genero
                 // ver se o genero do pedido e da sauna sao iguais
                 if(pedido.genero == sauna.genero && sauna.numLugaresOcupados < sauna.numLugaresMax) {
-                        // adicionar pessoa a sauna
-                        sauna.pedidosServidos++;
+                        printf("Aceito: %d %c %d\n", pedido.numSerie, pedido.genero, pedido.tempo);
                         // criar thread da utilizacao da sauna
                         pthread_create(&utilizadoresThreads[sauna.numLugaresOcupados], NULL, adicionarASauna, &pedido);
 
+                        // adicionar pessoa a sauna
+                        if(pedido.genero == 'M') {
+                                sauna.pedidosServidosM++;
+                        } else {
+                                sauna.pedidosServidosF++;
+                        }
                         sauna.numLugaresOcupados++;
                 }
                 // genero da pessoa e da sauna nao sao iguais
                 else{
-                        sauna.pedidosRecusados++;
+                        if(pedido.genero == 'M') {
+                                sauna.pedidosRecusadosM++;
+                        } else {
+                                sauna.pedidosRecusadosF++;
+                        }
                         // devolver atraves do canal de rejeitados
                         rejeitarPedido(pedido, fdRejeitados);
                 }
 
+                pthread_mutex_unlock(&mut); // unlock thread
         }
 
         // esperar pedidos serem completados
         int i = 0;
         for (i = 0; i < sauna.numLugaresOcupados; i++) {
                 pthread_join(utilizadoresThreads[i], NULL);
-        }
+        };
 
         // fechar descritor
         close(fdSauna);
+        printf("SAUNA: CLOSED SAUNA\n");
         close(fdRejeitados);
+        printf("sauna: closed rejeitados\n");
         // destruir fifo rejeitados
         unlink(PATH_FIFO_REJEITADOS);
+        unlink(PATH_FIFO_SAUNA_ENTRADA);
+        printf("SAUNA: DESTROYED FIFOS\n");
 }
 
 void rejeitarPedido(Pedido pedido, int fd){
