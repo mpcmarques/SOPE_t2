@@ -82,13 +82,13 @@ void startGerador(int numPedidos, int maxUtilizacao){
 
         //  abrir fifo entrada da sauna
         while((saunaEntradaFD = open(PATH_FIFO_SAUNA_ENTRADA, O_WRONLY | O_NONBLOCK)) < 0) {
-                printf("waiting for fifo sauna entrada...\n");
+                printf("Gerador: Aguardando ligação com a lista de pedidos da sauna..\n");
                 sleep(1);
         }
 
         //  abrir fifo rejeitados
         while((rejeitadosFD = open(PATH_FIFO_REJEITADOS, O_RDONLY)) < 0) {
-                printf("waiting for fifo rejeitados..\n");
+                printf("Gerador: Aguardando ligação com a lista de rejeitados da sauna..\n");
                 sleep(1);
         }
 
@@ -97,24 +97,22 @@ void startGerador(int numPedidos, int maxUtilizacao){
 
         if(pthread_create(&geradorThread, NULL, gerarPedidos, NULL) != 0) {
                 // error handler
-                perror("erro criando thread geradorThread");
+                perror("Gerador: erro criando thread geradorThread");
                 return;
         }
 
         if(pthread_create(&observadorRejeitadosThread, NULL, observarRejeitados, NULL) != 0) {
                 // error handler
-                perror("erro criando thread observarRejeitados");
+                perror("Gerador: erro criando thread observarRejeitados");
                 return;
         }
 
         pthread_join(geradorThread, NULL);
         pthread_join(observadorRejeitadosThread, NULL);
 
-        // fechar FIFOS
-        close(saunaEntradaFD);
+        // fechar fifo
         close(rejeitadosFD);
-
-        printf("GERADOR: CLOSED FIFOS\n");
+        printf("Gerador: terminou!\n");
 }
 
 void gravarMensagemRegistro(Pedido pedido, char *status_pedido){
@@ -168,10 +166,11 @@ void *gerarPedidos(void *args){
 
                 pthread_mutex_unlock(&mut); // unlock thread
 
-                sleep(1);
+                sleep(2);
         }
 
-        printf("gerarpedidos terminou!\n");
+        // fechar FIFOS
+        close(saunaEntradaFD);
 
         return NULL;
 }
@@ -183,7 +182,6 @@ void *observarRejeitados(void *args){
                 pthread_mutex_lock(&mut); // lock thread
                 // re-aproveita se o pedido foi rejeitado menos de 3 vezes
                 if (pedido.numRejeicao < 3) {
-                        printf("Rejeitado: %d %c %d %d\n", pedido.numSerie, pedido.genero, pedido.tempo, pedido.numRejeicao);
 
                         if (pedido.genero == 'M') {
                                 gerador.pedidosRecusadosM++;
@@ -206,8 +204,6 @@ void *observarRejeitados(void *args){
 
                 sleep(1);
         }
-
-        printf("observer rejeitados terminou!\n");
 
         return NULL;
 }

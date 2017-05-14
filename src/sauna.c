@@ -41,7 +41,7 @@ int main(int argc, char const *argv[]) {
                 sauna.pedidosRecebidosM,
                 sauna.pedidosServidosM,
                 sauna.pedidosRecusadosM);
-                
+
         fprintf(registroFile, "MULHERES : Recebidos: %d Servidos: %d Recusados: %d\n",
                 sauna.pedidosRecebidosF,
                 sauna.pedidosServidosF,
@@ -54,6 +54,8 @@ int main(int argc, char const *argv[]) {
 
         // fechar file
         fclose(registroFile);
+
+        printf("Sauna: terminou! \n");
         return 0;
 }
 
@@ -72,7 +74,6 @@ void *adicionarASauna(void *args){
 
         pthread_mutex_lock(&mut); // lock thread
 
-        printf("ended sleeping..\n");
         // remover da sauna
         sauna.numLugaresOcupados--;
 
@@ -121,17 +122,17 @@ void startSauna(int numLugares){
                 return;
         }
 
-        printf("Sauna: fifos criados, esperando ligação\n");
+        printf("Sauna: sauna iniciada, esperando ligação com gerador..\n");
 
         // abrir sauna entrada para leitura
         while((fdSauna = open(PATH_FIFO_SAUNA_ENTRADA, O_RDONLY)) < 0) {
-                perror("sauna: error opening fifo sauna entrada");
+                printf("Sauna: aguardando lista de pedidos da sauna..\n");
                 sleep(1);
         }
 
         // abrir rejeitados para escrita
         while((fdRejeitados = open(PATH_FIFO_REJEITADOS, O_WRONLY | O_NONBLOCK)) < 0) {
-                printf("sauna: aguardando rejeitados..\n");
+                printf("Sauna: aguardando lista de recusados..\n");
                 sleep(1);
         }
 
@@ -168,6 +169,7 @@ void startSauna(int numLugares){
                 }
                 // genero da pessoa e da sauna nao sao iguais
                 else{
+                        printf("Rejeitado: %d %c %d %d\n", pedido.numSerie, pedido.genero, pedido.tempo, pedido.numRejeicao);
                         if(pedido.genero == 'M') {
                                 sauna.pedidosRecusadosM++;
                         } else {
@@ -188,13 +190,10 @@ void startSauna(int numLugares){
 
         // fechar descritor
         close(fdSauna);
-        printf("SAUNA: CLOSED SAUNA\n");
         close(fdRejeitados);
-        printf("sauna: closed rejeitados\n");
         // destruir fifo rejeitados
         unlink(PATH_FIFO_REJEITADOS);
         unlink(PATH_FIFO_SAUNA_ENTRADA);
-        printf("SAUNA: DESTROYED FIFOS\n");
 }
 
 void rejeitarPedido(Pedido pedido, int fd){
