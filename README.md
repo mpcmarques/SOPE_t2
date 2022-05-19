@@ -3,7 +3,7 @@
 O trabalho foi feito individualmente pois sou trabalhador estudante.
   * nome: Mateus Pedroza Cortes Marques
   * up201601876
-  * email: mateus@hoogie.pt
+  * email: mpcmarques@icloud.com
 
 > As situações de competição no acesso a elementos partilhados foram evitadas
 utilizando mutexes protegendo as variáveis globais do programa. Em cada parte do código que poderia
